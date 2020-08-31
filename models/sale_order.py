@@ -57,12 +57,25 @@ class SaleOrderLine(models.Model):
             # supplier_po_map[partner_supplier.id] = purchase_order
 
             # [ADD] allways create new PO
-            values = line._purchase_service_prepare_order_values(supplierinfo)
-            purchase_order = PurchaseOrder.create(values)
+            sellers = line.product_id.seller_ids
 
+            # [ADD] generate PO to every product supplier
+            for seller in sellers:
+                if seller.id == supplierinfo.id:
+                    values = line._purchase_service_prepare_order_values(supplierinfo)
+                    purchase_order = PurchaseOrder.create(values)
+                    values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
+                    purchase_line = line.env['purchase.order.line'].create(values)
+                else:
+                    values = line._purchase_service_prepare_order_values(seller)
+                    purchase_order = PurchaseOrder.create(values)
+                    values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
+                    purchase_line_other = line.env['purchase.order.line'].create(values)
+
+            # [REM] remove this to generate PO to every product supplier
             # add a PO line to the PO
-            values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
-            purchase_line = line.env['purchase.order.line'].create(values)
+            # values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
+            # purchase_line = line.env['purchase.order.line'].create(values)
 
             # link the generated purchase to the SO line
             sale_line_purchase_map.setdefault(line, line.env['purchase.order.line'])

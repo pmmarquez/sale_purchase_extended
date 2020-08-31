@@ -6,8 +6,8 @@
         Extend sale_purchase integration""",
 
     'description': """
-        Allways create new PO from new SO
-        Generate POs for every product supplier
+        -Allways create new PO from new SO
+        -Generate POs for every product supplier
     """,
 
     'author': "pmmarquez@gmx.com",
