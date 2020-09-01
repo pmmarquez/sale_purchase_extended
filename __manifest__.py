@@ -8,6 +8,8 @@
     'description': """
         -Allways create new PO from new SO
         -Generate POs for every product supplier
+        -Cancel POs related with SO when SO is canceled
+        -When one PO is confirmed cancel other orders related to same SO
     """,
 
     'author': "pmmarquez@gmx.com",

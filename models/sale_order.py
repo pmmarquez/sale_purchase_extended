@@ -6,6 +6,31 @@ from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 # from odoo.tools import float_compare
 
+class SaleOrder(models.Model):
+    _inherit = 'sale.order'
+
+    @api.depends('order_line.purchase_line_ids')
+    def _activity_cancel_on_purchase(self):
+        """ If some SO are cancelled, we need to put an activity on their generated purchase. If sale lines of
+            different sale orders impact different purchase, we only want one activity to be attached.
+        """
+        purchase_to_notify_map = {}  # map PO -> recordset of SOL as {purchase.order: set(sale.orde.liner)}
+
+        purchase_order_lines = self.env['purchase.order.line'].search([('sale_line_id', 'in', self.mapped('order_line').ids), ('state', '!=', 'cancel')])
+        for purchase_line in purchase_order_lines:
+            purchase_to_notify_map.setdefault(purchase_line.order_id, self.env['sale.order.line'])
+            purchase_to_notify_map[purchase_line.order_id] |= purchase_line.sale_line_id
+
+        for purchase_order, sale_order_lines in purchase_to_notify_map.items():
+            purchase_order.activity_schedule_with_view('mail.mail_activity_data_warning',
+                user_id=purchase_order.user_id.id or self.env.uid,
+                views_or_xmlid='sale_purchase.exception_purchase_on_sale_cancellation',
+                render_context={
+                    'sale_orders': sale_order_lines.mapped('order_id'),
+                    'sale_order_lines': sale_order_lines,
+            })
+            # [ADD] cancel all related PO
+            purchase_order.sudo().button_cancel()
 
 class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
@@ -61,16 +86,10 @@ class SaleOrderLine(models.Model):
 
             # [ADD] generate PO to every product supplier
             for seller in sellers:
-                if seller.id == supplierinfo.id:
-                    values = line._purchase_service_prepare_order_values(supplierinfo)
-                    purchase_order = PurchaseOrder.create(values)
-                    values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
-                    purchase_line = line.env['purchase.order.line'].create(values)
-                else:
-                    values = line._purchase_service_prepare_order_values(seller)
-                    purchase_order = PurchaseOrder.create(values)
-                    values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
-                    purchase_line_other = line.env['purchase.order.line'].create(values)
+                values = line._purchase_service_prepare_order_values(seller)
+                purchase_order = PurchaseOrder.create(values)
+                values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
+                purchase_line = line.env['purchase.order.line'].create(values)
 
             # [REM] remove this to generate PO to every product supplier
             # add a PO line to the PO
