@@ -86,11 +86,14 @@ class SaleOrderLine(models.Model):
 
             # [ADD] generate PO to every product supplier
             for seller in sellers:
-                values = line._purchase_service_prepare_order_values(seller)
-                purchase_order = PurchaseOrder.create(values)
-                values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
-                purchase_line = line.env['purchase.order.line'].create(values)
-
+                # not create if allready exist
+                purchase_order_count = self.env['purchase.order'].search_count([('partner_id', '=', seller.id),('origin','ilike',self.order_id.name)])
+                if  purchase_order_count == 0:
+                    values = line._purchase_service_prepare_order_values(seller)
+                    purchase_order = PurchaseOrder.create(values)
+                    values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
+                    purchase_line = line.env['purchase.order.line'].create(values)
+            
             # [REM] remove this to generate PO to every product supplier
             # add a PO line to the PO
             # values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
