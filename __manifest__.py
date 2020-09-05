@@ -10,6 +10,7 @@
         -Generate POs for every product supplier
         -Cancel POs related with SO when SO is canceled
         -When one PO is confirmed cancel other orders related to same SO
+        -When PO state to sent add origin SO client and PO supplier to followers 
     """,
 
     'author': "pmmarquez@gmx.com",

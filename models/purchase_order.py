@@ -23,10 +23,18 @@ class PurchaseOrder(models.Model):
                 purchase_order_line.sudo()._sale_service_create_line()
         return result    
     
+    def set_state_sent(self):
+        self.write({'state': "sent"})
+        # add origin SO client to followers
+        for order in self.filtered(lambda order: order.partner_id not in order.message_partner_ids):
+            sale_order = self.env['sale.order'].search([('name','ilike',order.origin)])
+            order.message_subscribe([order.partner_id.id, sale_order.partner_id.id])
+        
+        return True
+
 class PurchaseOrderLine(models.Model):
     _inherit = 'purchase.order.line'
 
-    @api.model
     def _sale_service_create_line(self):
         """ Create sale.order.line from purchase.order.line.
             :param 
