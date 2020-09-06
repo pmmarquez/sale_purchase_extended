@@ -29,8 +29,10 @@ class PurchaseOrder(models.Model):
         for order in self.filtered(lambda order: order.partner_id not in order.message_partner_ids):
             sale_order = self.env['sale.order'].search([('name','ilike',order.origin)])
             order.message_subscribe([order.partner_id.id, sale_order.partner_id.id])
-        
         return True
+        
+    def search_messages(self, domain, fields):
+        return  self.env['mail.message'].sudo().search_read(domain,fields)
 
 class PurchaseOrderLine(models.Model):
     _inherit = 'purchase.order.line'
