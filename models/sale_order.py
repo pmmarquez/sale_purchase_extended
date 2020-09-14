@@ -9,6 +9,19 @@ from odoo.exceptions import UserError
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
+
+    @api.depends('order_line.invoice_lines')
+    def _get_invoiced(self):
+        # The invoice_ids are obtained thanks to the invoice lines of the SO
+        # lines, and we also search for possible refunds created directly from
+        # existing invoices. This is necessary since such a refund is not
+        # directly linked to the SO.
+        for order in self:
+            # invoices = order.order_line.invoice_lines.move_id.sudo().filtered(lambda r: r.type in ('out_invoice', 'out_refund'))
+            invoices = self.env['account.move'].sudo().search([('invoice_origin','ilike',self.name)])
+            order.invoice_ids = invoices
+            order.invoice_count = len(invoices)
+
     def _activity_cancel_on_purchase(self):
         """ If some SO are cancelled, we need to put an activity on their generated purchase. If sale lines of
             different sale orders impact different purchase, we only want one activity to be attached.
@@ -21,15 +34,29 @@ class SaleOrder(models.Model):
             purchase_to_notify_map[purchase_line.order_id] |= purchase_line.sale_line_id
 
         for purchase_order, sale_order_lines in purchase_to_notify_map.items():
-            purchase_order.activity_schedule_with_view('mail.mail_activity_data_warning',
-                user_id=purchase_order.user_id.id or self.env.uid,
-                views_or_xmlid='sale_purchase.exception_purchase_on_sale_cancellation',
-                render_context={
-                    'sale_orders': sale_order_lines.mapped('order_id'),
-                    'sale_order_lines': sale_order_lines,
-            })
+            # purchase_order.activity_schedule_with_view('mail.mail_activity_data_warning',
+            #     user_id=purchase_order.user_id.id or self.env.uid,
+            #     views_or_xmlid='sale_purchase.exception_purchase_on_sale_cancellation',
+            #     render_context={
+            #         'sale_orders': sale_order_lines.mapped('order_id'),
+            #         'sale_order_lines': sale_order_lines,
+            # })
             # [ADD] cancel all related PO
             purchase_order.sudo().button_cancel()
+
+    def create_full_invoice(self):
+        context = {
+            'active_model': 'sale.order',
+            'active_ids': [self.id],
+            'active_id': self.id,
+        }
+        payment = self.env['sale.advance.payment.inv'].with_context(context).create({
+            'advance_payment_method': 'delivered'
+        })
+        payment.create_invoices()
+        invoice = self.invoice_ids[0]
+        invoice.post()
+        return invoice.id
 
 class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'

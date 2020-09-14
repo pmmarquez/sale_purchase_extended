@@ -9,8 +9,9 @@
         -Allways create new PO from new SO
         -Generate POs for every product supplier
         -Cancel POs related with SO when SO is canceled
-        -When one PO is confirmed cancel other orders related to same SO
-        -When PO state to sent add origin SO client and PO supplier to followers 
+        -When one PO is confirmed cancel other orders related to same SO and new PO lines are copied to SO
+        -When PO state to sent add origin SO client and PO supplier to followers
+        -create_full_invoice method to generate Invoice from SO
     """,
 
     'author': "pmmarquez@gmx.com",
