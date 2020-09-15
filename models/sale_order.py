@@ -54,8 +54,10 @@ class SaleOrder(models.Model):
             'advance_payment_method': 'delivered'
         })
         payment.create_invoices()
-        invoice = self.invoice_ids[0]
-        invoice.post()
+        for inv in self.invoice_ids:
+            if inv.state == 'draft':
+                inv.post()
+                invoice = inv
         return invoice.id
 
 class SaleOrderLine(models.Model):

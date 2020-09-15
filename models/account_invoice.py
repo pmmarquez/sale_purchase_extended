@@ -103,42 +103,58 @@ class AccountMove(models.Model):
         # This is performed at the very end to avoid flushing fields before the whole processing.
         self._check_balanced()
 
-    def action_reverse(self):
-        action = self.env.ref('account.action_view_account_move_reversal').read()[0]
+    @api.onchange('purchase_vendor_bill_id', 'purchase_id')
+    def _onchange_purchase_auto_complete(self):
+        ''' Load from either an old purchase order, either an old vendor bill.
 
-        if self.is_invoice():
-            action['name'] = _('Credit Note')
+        When setting a 'purchase.bill.union' in 'purchase_vendor_bill_id':
+        * If it's a vendor bill, 'invoice_vendor_bill_id' is set and the loading is done by '_onchange_invoice_vendor_bill'.
+        * If it's a purchase order, 'purchase_id' is set and this method will load lines.
 
-        return action
+        /!\ All this not-stored fields must be empty at the end of this function.
+        '''
+        if self.purchase_vendor_bill_id.vendor_bill_id:
+            self.invoice_vendor_bill_id = self.purchase_vendor_bill_id.vendor_bill_id
+            self._onchange_invoice_vendor_bill()
+        elif self.purchase_vendor_bill_id.purchase_order_id:
+            self.purchase_id = self.purchase_vendor_bill_id.purchase_order_id
+        self.purchase_vendor_bill_id = False
 
-    def action_post(self):
-        if self.filtered(lambda x: x.journal_id.post_at == 'bank_rec').mapped('line_ids.payment_id').filtered(lambda x: x.state != 'reconciled'):
-            raise UserError(_("A payment journal entry generated in a journal configured to post entries only when payments are reconciled with a bank statement cannot be manually posted. Those will be posted automatically after performing the bank reconciliation."))
-        return self.post()
+        if not self.purchase_id:
+            return
 
-    def js_assign_outstanding_line(self, line_id):
-        self.ensure_one()
-        lines = self.env['account.move.line'].browse(line_id)
-        lines += self.line_ids.filtered(lambda line: line.account_id == lines[0].account_id and not line.reconciled)
-        return lines.reconcile()
+        # Copy partner.
+        self.partner_id = self.purchase_id.partner_id
+        self.fiscal_position_id = self.purchase_id.fiscal_position_id
+        self.invoice_payment_term_id = self.purchase_id.payment_term_id
+        self.currency_id = self.purchase_id.currency_id
 
-    def button_draft(self):
-        AccountMoveLine = self.env['account.move.line']
-        excluded_move_ids = []
+        # Copy purchase lines.
+        po_lines = self.purchase_id.order_line - self.line_ids.mapped('purchase_line_id')
+        new_lines = self.env['account.move.line']
+        for line in po_lines.filtered(lambda l: not l.display_type):
+            method_purchase = line.product_id.purchase_method == 'purchase' and line.product_qty != line.qty_invoiced
+            not_method_purchase = line.product_id.purchase_method != 'purchase' and line.qty_received != line.qty_invoiced
+            if method_purchase or not_method_purchase:
+                new_line = new_lines.new(line._prepare_account_move_line(self))
+                new_line.account_id = new_line._get_computed_account()
+                new_line._onchange_price_subtotal()
+                new_lines += new_line
+        new_lines._onchange_mark_recompute_taxes()
 
-        if self._context.get('suspense_moves_mode'):
-            excluded_move_ids = AccountMoveLine.search(AccountMoveLine._get_suspense_moves_domain() + [('move_id', 'in', self.ids)]).mapped('move_id').ids
+        # Compute invoice_origin.
+        origins = set(self.line_ids.mapped('purchase_line_id.order_id.name'))
+        self.invoice_origin = ','.join(list(origins))
 
-        for move in self:
-            if move in move.line_ids.mapped('full_reconcile_id.exchange_move_id'):
-                raise UserError(_('You cannot reset to draft an exchange difference journal entry.'))
-            if move.tax_cash_basis_rec_id:
-                raise UserError(_('You cannot reset to draft a tax cash basis journal entry.'))
-            if move.restrict_mode_hash_table and move.state == 'posted' and move.id not in excluded_move_ids:
-                raise UserError(_('You cannot modify a posted entry of this journal because it is in strict mode.'))
-            # We remove all the analytics entries for this journal
-            move.mapped('line_ids.analytic_line_ids').unlink()
+        # Compute ref.
+        refs = set(self.line_ids.mapped('purchase_line_id.order_id.partner_ref'))
+        refs = [ref for ref in refs if ref]
+        self.ref = ','.join(refs)
 
-        self.mapped('line_ids').remove_move_reconcile()
-        self.write({'state': 'draft'})
+        # Compute invoice_payment_ref.
+        if len(refs) == 1:
+            self.invoice_payment_ref = refs[0]
 
+        self.purchase_id = False
+        self._onchange_currency()
+        self.invoice_partner_bank_id = self.bank_partner_id.bank_ids and self.bank_partner_id.bank_ids[0]

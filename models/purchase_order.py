@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from odoo import api, fields, models
+from odoo import api, fields, models, SUPERUSER_ID
+from odoo.tests import Form
 
 
 class PurchaseOrder(models.Model):
@@ -13,6 +14,10 @@ class PurchaseOrder(models.Model):
         purchase_orders = self.env['purchase.order'].search([('id', 'not in', self.ids),('origin','ilike',self.origin)])
         for order in purchase_orders:
             order.sudo().button_cancel()
+        self.update_sale_order_lines()
+        return result
+
+    def update_sale_order_lines(self):
         # update SO with new PO lines
         sale_order_lines = self.env['sale.order.line'].search([('order_id.name','ilike',self.origin)])
         sale_order_line_ids = []
@@ -21,7 +26,16 @@ class PurchaseOrder(models.Model):
         for purchase_order_line in self.order_line:
             if purchase_order_line.sale_line_id.id not in sale_order_line_ids:
                 purchase_order_line.sudo()._sale_service_create_line()
-        return result    
+        return True
+
+    def create_full_invoice(self):
+        action = self.action_view_invoice()
+        invoice_form = Form(self.env['account.move'].with_user(SUPERUSER_ID).with_context(
+            action['context']
+        ))
+        invoice = invoice_form.save()
+        invoice.post()
+        return invoice.id
     
     def set_state_sent(self):
         self.write({'state': "sent"})

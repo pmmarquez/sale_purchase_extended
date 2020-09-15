@@ -11,7 +11,8 @@
         -Cancel POs related with SO when SO is canceled
         -When one PO is confirmed cancel other orders related to same SO and new PO lines are copied to SO
         -When PO state to sent add origin SO client and PO supplier to followers
-        -create_full_invoice method to generate Invoice from SO
+        -create_full_invoice SO method to generate Invoice from SO
+        -create_full_invoice PO method to generate Invoice from PO
     """,
 
     'author': "pmmarquez@gmx.com",
