@@ -8,12 +8,33 @@ from odoo.tests import Form
 class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
 
+    def button_cancel(self):
+        if self.state == 'sent':
+            sale_order = self.env['sale.order'].search([('name','ilike',self.origin)])
+            self.env['bus.bus'].sendone(
+                self._cr.dbname + '_' + str(sale_order.partner_id.id),
+                {'type': 'purchase_order_notification', 'action':'canceled', "order_id":self.id})
+        result = super(PurchaseOrder, self).button_cancel()
+        return result
+
+    def _activity_cancel_on_sale(self):
+        """ If some PO are cancelled, we need to put an activity on their origin SO (only the open ones). Since a PO can have
+            been modified by several SO, when cancelling one PO, many next activities can be schedulded on different SO.
+        """
+        sale_to_notify_map = False
+    
     def button_confirm(self):
         result = super(PurchaseOrder, self).button_confirm()
         # cancel other orders related to same SO
+        self.env['bus.bus'].sendone(
+            self._cr.dbname + '_' + str(self.partner_id.id),
+            {'type': 'purchase_order_notification', 'action':'confirmed', "order_id":self.id})
         purchase_orders = self.env['purchase.order'].search([('id', 'not in', self.ids),('origin','ilike',self.origin)])
         for order in purchase_orders:
             order.sudo().button_cancel()
+            self.env['bus.bus'].sendone(
+                self._cr.dbname + '_' + str(order.partner_id.id),
+                {'type': 'purchase_order_notification', 'action':'calceled', "order_id":order.id})
         self.update_sale_order_lines()
         return result
 
@@ -43,6 +64,9 @@ class PurchaseOrder(models.Model):
         for order in self.filtered(lambda order: order.partner_id not in order.message_partner_ids):
             sale_order = self.env['sale.order'].search([('name','ilike',order.origin)])
             order.message_subscribe([order.partner_id.id, sale_order.partner_id.id])
+            self.env['bus.bus'].sendone(
+                self._cr.dbname + '_' + str(sale_order.partner_id.id),
+                {'type': 'purchase_order_notification', 'action':'created', "order_id":order.id})
         return True
         
     def search_messages(self, domain, fields):

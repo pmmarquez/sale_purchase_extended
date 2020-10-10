@@ -34,14 +34,6 @@ class SaleOrder(models.Model):
             purchase_to_notify_map[purchase_line.order_id] |= purchase_line.sale_line_id
 
         for purchase_order, sale_order_lines in purchase_to_notify_map.items():
-            # purchase_order.activity_schedule_with_view('mail.mail_activity_data_warning',
-            #     user_id=purchase_order.user_id.id or self.env.uid,
-            #     views_or_xmlid='sale_purchase.exception_purchase_on_sale_cancellation',
-            #     render_context={
-            #         'sale_orders': sale_order_lines.mapped('order_id'),
-            #         'sale_order_lines': sale_order_lines,
-            # })
-            # [ADD] cancel all related PO
             purchase_order.sudo().button_cancel()
 
     def create_full_invoice(self):
@@ -92,6 +84,9 @@ class SaleOrderLine(models.Model):
                     purchase_order = PurchaseOrder.create(values)
                     values = line._purchase_service_prepare_line_values(purchase_order, quantity=quantity)
                     purchase_line = line.env['purchase.order.line'].create(values)
+                    self.env['bus.bus'].sendone(
+                        self._cr.dbname + '_' + str(purchase_order.partner_id.id),
+                        {'type': 'purchase_order_notification', 'action':'created', "order_id":purchase_order.id})
 
             # link the generated purchase to the SO line
             sale_line_purchase_map.setdefault(line, line.env['purchase.order.line'])

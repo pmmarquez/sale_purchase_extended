@@ -14,6 +14,13 @@
         -create_full_invoice SO method to generate Invoice from SO
         -create_full_invoice PO method to generate Invoice from PO
         -improbe message to work with binary data in attachments
+
+        notifications(channel format:'bd' + '_' + 'partner_id'):
+        -suplier on new PO created
+        -client on cancel of sent PO
+        -suplier on canceled PO 
+        -client on sent PO
+
     """,
 
     'author': "pmmarquez@gmx.com",
