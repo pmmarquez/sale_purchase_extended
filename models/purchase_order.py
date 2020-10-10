@@ -66,7 +66,7 @@ class PurchaseOrder(models.Model):
             order.message_subscribe([order.partner_id.id, sale_order.partner_id.id])
             self.env['bus.bus'].sendone(
                 self._cr.dbname + '_' + str(sale_order.partner_id.id),
-                {'type': 'purchase_order_notification', 'action':'created', "order_id":order.id})
+                {'type': 'purchase_order_notification', 'action':'accepted', "order_id":order.id})
         return True
         
     def search_messages(self, domain, fields):
