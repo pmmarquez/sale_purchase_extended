@@ -10,6 +10,8 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
 
+    require_materials = fields.Boolean('Require Materials true or false')
+
     @api.depends('order_line.invoice_lines')
     def _get_invoiced(self):
         # The invoice_ids are obtained thanks to the invoice lines of the SO
