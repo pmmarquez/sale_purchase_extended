@@ -8,6 +8,11 @@ from odoo.tests import Form
 class PurchaseOrder(models.Model):
     _inherit = "purchase.order"
 
+    note = fields.Text('Terms and conditions from SO')
+    title = fields.Text('title from SO')
+    commitment_date = fields.Datetime('Delivery Date from SO')
+    require_materials = fields.Boolean('Require Materials from SO')
+
     def button_cancel(self):
         if self.state == 'sent':
             sale_order = self.env['sale.order'].search([('name','ilike',self.origin)])

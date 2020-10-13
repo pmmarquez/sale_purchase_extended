@@ -11,6 +11,7 @@ class SaleOrder(models.Model):
 
 
     require_materials = fields.Boolean('Require Materials true or false')
+    title = fields.Text('title')
 
     @api.depends('order_line.invoice_lines')
     def _get_invoiced(self):
@@ -94,3 +95,27 @@ class SaleOrderLine(models.Model):
             sale_line_purchase_map.setdefault(line, line.env['purchase.order.line'])
             sale_line_purchase_map[line] |= purchase_line
         return sale_line_purchase_map
+    
+    def _purchase_service_prepare_order_values(self, supplierinfo):
+        """ Returns the values to create the purchase order from the current SO line.
+            :param supplierinfo: record of product.supplierinfo
+            :rtype: dict
+        """
+        self.ensure_one()
+        partner_supplier = supplierinfo.name
+        fiscal_position_id = self.env['account.fiscal.position'].sudo().get_fiscal_position(partner_supplier.id)
+        date_order = self._purchase_get_date_order(supplierinfo)
+        return {
+            'partner_id': partner_supplier.id,
+            'partner_ref': partner_supplier.ref,
+            'company_id': self.company_id.id,
+            'currency_id': partner_supplier.property_purchase_currency_id.id or self.env.company.currency_id.id,
+            'dest_address_id': False, # False since only supported in stock
+            'origin': self.order_id.name,
+            'payment_term_id': partner_supplier.property_supplier_payment_term_id.id,
+            'date_order': date_order,
+            'note': self.order_id.note,
+            'title': self.order_id.title,
+            'commitment_date': self.order_id.commitment_date,
+            'require_materials': self.order_id.require_materials,
+        }
