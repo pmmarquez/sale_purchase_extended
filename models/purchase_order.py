@@ -12,6 +12,15 @@ class PurchaseOrder(models.Model):
     title = fields.Text('title from SO')
     commitment_date = fields.Datetime('Delivery Date from SO')
     require_materials = fields.Boolean('Require Materials from SO')
+    address_street = fields.Text('Address Street from SO')
+    address_floor = fields.Text('Address Floor from SO')
+    address_portal = fields.Text('Address Portal from SO')
+    address_number = fields.Text('Address Number from SO')
+    address_door = fields.Text('Address door from SO')
+    address_stairs = fields.Text('Address Stairs from SO')
+    address_zip_code = fields.Text('Address ZIP Code from SO')
+    address_latitude = fields.Text('Address Geo Latitude from SO')
+    address_longitude = fields.Text('Address Geo Longitude from SO')
 
     def button_cancel(self):
         if self.state == 'sent':

@@ -12,6 +12,15 @@ class SaleOrder(models.Model):
 
     require_materials = fields.Boolean('Require Materials true or false')
     title = fields.Text('title')
+    address_street = fields.Text('Address Street')
+    address_floor = fields.Text('Address Floor')
+    address_portal = fields.Text('Address Portal')
+    address_number = fields.Text('Address Number')
+    address_door = fields.Text('Address door')
+    address_stairs = fields.Text('Address Stairs')
+    address_zip_code = fields.Text('Address ZIP Code')
+    address_latitude = fields.Text('Address Geo Latitude')
+    address_longitude = fields.Text('Address Geo Longitude')
 
     @api.depends('order_line.invoice_lines')
     def _get_invoiced(self):
@@ -118,4 +127,13 @@ class SaleOrderLine(models.Model):
             'title': self.order_id.title,
             'commitment_date': self.order_id.commitment_date,
             'require_materials': self.order_id.require_materials,
+            'address_street' : self.order_id.address_street,
+            'address_floor' : self.order_id.address_floor,
+            'address_portal' : self.order_id.address_portal,
+            'address_number' : self.order_id.address_number,
+            'address_door' : self.order_id.address_door,
+            'address_stairs' : self.order_id.address_stairs,
+            'address_zip_code' : self.order_id.address_zip_code,
+            'address_latitude' : self.order_id.address_latitude,
+            'address_longitude' : self.order_id.address_longitude,
         }
