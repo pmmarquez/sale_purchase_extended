@@ -86,6 +86,16 @@ class PurchaseOrder(models.Model):
     def search_messages(self, domain, fields):
         return  self.env['mail.message'].sudo().search_read(domain,fields)
 
+    @api.returns('mail.message', lambda value: value.id)
+    def message_post(self, **kwargs):
+        message_id = super(PurchaseOrder, self.with_context(mail_post_autofollow=True)).message_post(**kwargs)
+        for partner_id in self.message_partner_ids:
+            if partner_id.id != self.env.user.partner_id.id:
+                self.env['bus.bus'].sendone(
+                    self._cr.dbname + '_' + str(partner_id.id),
+                    {'type': 'message_notification', 'action':'new', "message_id":message_id.id})
+        return message_id
+
 class PurchaseOrderLine(models.Model):
     _inherit = 'purchase.order.line'
 
