@@ -46,10 +46,10 @@ class PurchaseOrder(models.Model):
             {'type': 'purchase_order_notification', 'action':'confirmed', "order_id":self.id})
         purchase_orders = self.env['purchase.order'].search([('id', 'not in', self.ids),('origin','ilike',self.origin)])
         for order in purchase_orders:
-            order.sudo().button_cancel()
             self.env['bus.bus'].sendone(
                 self._cr.dbname + '_' + str(order.partner_id.id),
                 {'type': 'purchase_order_notification', 'action':'calceled', "order_id":order.id})
+            order.sudo().button_cancel()
         self.update_sale_order_lines()
         return result
 
