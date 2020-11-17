@@ -63,6 +63,11 @@ class SaleOrder(models.Model):
                 inv.post()
                 invoice = inv
         return invoice.id
+    
+    def action_cancel(self):
+        result = super(SaleOrder, self).action_cancel()
+        self.sudo().unlink()
+        return result
 
 class SaleOrderLine(models.Model):
     _inherit = 'sale.order.line'

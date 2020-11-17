@@ -29,6 +29,7 @@ class PurchaseOrder(models.Model):
                 self._cr.dbname + '_' + str(sale_order.partner_id.id),
                 {'type': 'purchase_order_notification', 'action':'canceled', "order_id":self.id})
         result = super(PurchaseOrder, self).button_cancel()
+        self.sudo().unlink()
         return result
 
     def _activity_cancel_on_sale(self):

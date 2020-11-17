@@ -11,15 +11,16 @@
         -Cancel POs related with SO when SO is canceled
         -When one PO is confirmed cancel other orders related to same SO and new PO lines are copied to SO
         -When PO state to sent add origin SO client and PO supplier to followers
-        -create_full_invoice SO method to generate Invoice from SO
-        -create_full_invoice PO method to generate Invoice from PO
-        -improbe message to work with binary data in attachments
+        -Create_full_invoice SO method to generate Invoice from SO
+        -Create_full_invoice PO method to generate Invoice from PO
+        -Dmprobe message to work with binary data in attachments
+        -Delete SO and PO after cancel
 
         notifications(channel format:'bd' + '_' + 'partner_id'):
-        -suplier on new PO created
-        -client on cancel of sent PO
-        -suplier on canceled PO 
-        -client on sent PO
+        -Suplier on new PO created
+        -Client on cancel of sent PO
+        -Suplier on canceled PO 
+        -Client on sent PO
 
     """,
 
