@@ -136,4 +136,23 @@ class PurchaseOrderLine(models.Model):
             'purchase_line_ids': [(6, 0, self.ids)],
         }
         
-        return self.env['sale.order.line'].sudo().create(values) 
+        return self.env['sale.order.line'].sudo().create(values)
+
+    @api.model
+    def create(self, values):
+        line = super(PurchaseOrderLine, self).create(values)
+        for partner_id in line.order_id.message_partner_ids:
+            if partner_id.id != self.env.user.partner_id.id:
+                self.env['bus.bus'].sendone(
+                    self._cr.dbname + '_' + str(partner_id.id),
+                    {'type': 'purchase_order_line_notification', 'action':'new', "line_id":line.id, "order_id":line.order_id.id})
+        return line
+
+    def write(self, values): 
+        line = super(PurchaseOrderLine, self).write(values)
+        for partner_id in line.order_id.message_partner_ids:
+            if partner_id.id != self.env.user.partner_id.id:
+                self.env['bus.bus'].sendone(
+                    self._cr.dbname + '_' + str(partner_id.id),
+                    {'type': 'purchase_order_line_notification', 'action':'update', "line_id":line.id, "order_id":line.order_id.id})
+        return line

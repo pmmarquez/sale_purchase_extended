@@ -17,10 +17,11 @@
         -Delete SO and PO after cancel
 
         notifications(channel format:'bd' + '_' + 'partner_id'):
-        -Suplier on new PO created
-        -Client on cancel of sent PO
-        -Suplier on canceled PO 
-        -Client on sent PO
+            -Suplier on new PO created
+            -Client on cancel of sent PO
+            -Suplier on canceled PO 
+            -Client on sent PO
+            -Client on new or updated PO line
 
     """,
 
