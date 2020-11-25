@@ -28,6 +28,9 @@ class PurchaseOrder(models.Model):
             self.env['bus.bus'].sendone(
                 self._cr.dbname + '_' + str(sale_order.partner_id.id),
                 {'type': 'purchase_order_notification', 'action':'canceled', "order_id":self.id})
+        self.env['bus.bus'].sendone(
+                self._cr.dbname + '_' + str(self.partner_id.id),
+                {'type': 'purchase_order_notification', 'action':'calceled', "order_id":self.id})
         result = super(PurchaseOrder, self).button_cancel()
         self.sudo().unlink()
         return result
@@ -46,9 +49,6 @@ class PurchaseOrder(models.Model):
             {'type': 'purchase_order_notification', 'action':'confirmed', "order_id":self.id})
         purchase_orders = self.env['purchase.order'].search([('id', 'not in', self.ids),('origin','ilike',self.origin)])
         for order in purchase_orders:
-            self.env['bus.bus'].sendone(
-                self._cr.dbname + '_' + str(order.partner_id.id),
-                {'type': 'purchase_order_notification', 'action':'calceled', "order_id":order.id})
             order.sudo().button_cancel()
         self.update_sale_order_lines()
         return result
