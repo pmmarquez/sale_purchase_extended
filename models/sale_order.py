@@ -21,6 +21,7 @@ class SaleOrder(models.Model):
     address_zip_code = fields.Text('Address ZIP Code')
     address_latitude = fields.Text('Address Geo Latitude')
     address_longitude = fields.Text('Address Geo Longitude')
+    po_agreement = fields.Boolean(default=False)
 
     @api.depends('order_line.invoice_lines')
     def _get_invoiced(self):
@@ -103,7 +104,7 @@ class SaleOrderLine(models.Model):
                     purchase_line = line.env['purchase.order.line'].create(values)
                     self.env['bus.bus'].sendone(
                         self._cr.dbname + '_' + str(purchase_order.partner_id.id),
-                        {'type': 'purchase_order_notification', 'action':'created', "order_id":purchase_order.id})
+                        {'type': 'purchase_order_notification', 'action':'created', "order_id":purchase_order.id, "origin":purchase_order.origin})
 
             # link the generated purchase to the SO line
             sale_line_purchase_map.setdefault(line, line.env['purchase.order.line'])
